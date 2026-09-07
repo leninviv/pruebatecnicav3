@@ -127,7 +127,25 @@ Como mínimo deberían contemplarse casos como:
 - Salida de inventario
 - Intento de stock negativo
 
-Puedes decidir libremente si utilizas pruebas unitarias, de integración o una combinación de ambas.
+Puedes decidir libremente si utilizas pruebas unitarias, de integración, una combinación de ambas o si simplemente compartes en el GIT un archivo colleccion de postman y un excel con las pruebas documentadas
+
+### 7. Reporte de kardex
+
+El gerente necesita un reporte de kardex para revisar el estado de los productos junto con su inventario.
+
+Implementar:
+
+- `GET /api/reports/kardex`
+
+El resultado debe ser **JSON** y debe **combinar información de productos con sus movimientos de inventario**. No basta con devolver solo el catálogo de productos.
+
+Cada ítem del reporte debería permitir entender, como mínimo:
+
+- datos del producto (`id`, `code`, `name`, `price`, `stock`, `active`)
+- movimientos asociados (`IN` / `OUT`, cantidad, fecha)
+- el efecto de esos movimientos sobre el stock
+
+Si lo consideras útil, el endpoint puede aceptar filtros (por producto, por estado u otros criterios), siempre que el reporte siga mezclando ambas fuentes de información.
 
 ## Base de datos
 
