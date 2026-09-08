@@ -244,16 +244,41 @@ Al finalizar, agrega al README las siguientes secciones.
 
 ### Decisiones técnicas
 
-Indicar brevemente:
+#### Principales cambios realizados.
 
-- Principales cambios realizados.
-- Problemas encontrados.
-- Decisiones técnicas importantes.
-- Qué mejoraría si tuviera más tiempo.
+- Se completo el CRUD y ademas se agrego manejo de errores como productos que no existen en la DB, ademas de excepciones personalizadas a la logica del negocio para facilitar el debug.
+- Se implemento busqueda de productos por nombre, estado y usando los dos.
+- Se corrigio la logica de movimientos de inventario asi como solo dejar pasar los types IN y OUT.
+- Se agrego un menejo global de exceptions para devolver codigos HTTP correctos segun la respuesta.
+- Se arreglo el reporte de kardex agregando tambien el historial de movimientos, como un kardex normal deberia de funcionar.
+- Se agrego pruebas unitarias con JUnit para validar las principales reglas de negocio.
+
+#### Problemas encontrados.
+
+- Se paso por alto los posibles errores al buscar un producto que no existe con .get().
+- Se comparaba el tipo de movimiento con == lo que no era correcto si se quiere comparar que el texto sea igual.
+- Si algun tipo de movimiento era diferente de OUT se dejaba pasar.
+- No habia validacion adecuada de que la cantidad de movimiento sea valida.
+- No se estaba registrando los movimientos de inventario.
+- El kardex solo devolvia la info de los productos y no combinaba con los movimientos del inventario.
+
+#### Decisiones técnicas importantes.
+
+Los cambios de stock se realizan solamente con el endpoint de inventario, puesto que el PUT de productos no deberia de modificar directamente el campo del stock, lo que permite tener un historial consitente de movimientos.
+
+Para registrar un movimiento se agrego @Transactional, para que la actualizacion del stock y el registro del movimiento se realice como una operacion, y de haber un error porder hacer un rollback.
+
+Para la validacion de los errores se crearon exepciones especificas donde se centralizo su funcionamiento y codigos HTTP en un Global Handler, lo que mejora el debug a futuro.
+
+#### Qué mejoraría si tuviera más tiempo.
+
+Con mas tiempo mejoraria la documentacion de la API usando Swagger para agilizar la comprension de la misma, tambien añadir filtros adicionales al kardex, puesto que es un reporte.
+
+Tambien utilizaria contenedores para facilitar la subida de la API a produccion.
 
 ### Tiempo empleado
 
-Indicar aproximadamente cuánto tiempo tomó completar la prueba.
+Aproximadamente 3 horas.
 
 ## Restricciones
 
