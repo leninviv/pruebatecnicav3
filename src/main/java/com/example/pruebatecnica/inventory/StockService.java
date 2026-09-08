@@ -24,6 +24,11 @@ public class StockService {
     public Product register(Long productId, StockMovementRequest request) {
         // validacion de existencia de producto
         Product product = productRepository.findById(productId).orElseThrow(()->new ProductNotFoundException(productId));
+        
+        if (request == null) {
+            throw new InvalidMovementException("El movimiento es obligatorio");
+        }
+
         String type = request.getType();
         Integer quantity = request.getQuantity();
 
@@ -59,7 +64,8 @@ public class StockService {
     }
 
     public List<StockMovement> findByProduct(Long productId) {
-        productRepository.findById(productId).get();
+        // validacion de existencia de producto
+        productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException(productId));
         return stockMovementRepository.findByProduct_IdOrderByIdDesc(productId);
     }
 }
