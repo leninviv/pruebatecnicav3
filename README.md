@@ -242,18 +242,70 @@ No es necesario utilizar una cantidad específica de commits. Se recomienda util
 
 Al finalizar, agrega al README las siguientes secciones.
 
-### Decisiones técnicas
+---
 
-Indicar brevemente:
+## Decisiones técnicas
 
-- Principales cambios realizados.
-- Problemas encontrados.
-- Decisiones técnicas importantes.
-- Qué mejoraría si tuviera más tiempo.
+### Principales cambios realizados
 
-### Tiempo empleado
+**Bugs corregidos:**
 
-Indicar aproximadamente cuánto tiempo tomó completar la prueba.
+1. **Comparación de Strings con `==` (StockService)** — La condición `type == "OUT"` siempre evaluaba como `false` en Java porque compara referencias de objetos, no contenido. El stock nunca se reducía con movimientos OUT. Corregido a `"OUT".equals(type)`.
+
+2. **Movimientos de stock no se persistían (StockService)** — El método `register()` modificaba el stock del producto pero nunca guardaba el `StockMovement` en la base de datos. El historial de movimientos siempre aparecía vacío. Se agregó el `stockMovementRepository.save(movement)`.
+
+3. **`Optional.get()` sin validación (ProductService, StockService)** — En múltiples lugares se usaba `findById(id).get()` sin verificar si el Optional estaba presente, causando `NoSuchElementException` (HTTP 500) cuando el producto no existía. Reemplazado por `.orElseThrow(() -> new ProductNotFoundException(id))` para retornar HTTP 404.
+
+4. **Filtro `active` ignorado en `findAll()`** — El parámetro `active` era declarado en el método pero nunca utilizado. Se implementó el filtrado completo con soporte para combinaciones de filtros (`name` + `active`, solo `name`, solo `active`).
+
+5. **Búsqueda por nombre exacto en lugar de parcial** — `findByName()` generaba `WHERE name = ?`. Se reemplazó por `findByNameContainingIgnoreCase()` para búsquedas tipo LIKE `%nombre%` insensibles a mayúsculas/minúsculas.
+
+6. **`update()` solo actualizaba `name` y `price`** — Los campos `stock` y `active` eran ignorados en las actualizaciones. Se completó para actualizar todos los campos.
+
+7. **`create()` ignoraba el campo `active` del request** — Siempre fijaba `active = true` independientemente del valor enviado. Corregido para respetar el valor del request, con `true` como default si no se proporciona.
+
+8. **Kardex devolvía solo productos sin movimientos** — `KardexController` retornaba `List<Product>`, incumpliendo el requerimiento de combinar productos con su historial de movimientos.
+
+**Mejoras implementadas:**
+
+- **Manejo global de errores** (`GlobalExceptionHandler`): centraliza el manejo de excepciones con respuestas HTTP consistentes. Elimina la necesidad de try/catch en controladores.
+- **Excepciones personalizadas**: `ProductNotFoundException` (→ 404) e `InsufficientStockException` (→ 400) con mensajes descriptivos.
+- **Validaciones con Bean Validation** (`@NotBlank`, `@NotNull`, `@Min`, `@Pattern`): en `ProductRequest` y `StockMovementRequest`, con `@Valid` en los controllers.
+- **Códigos HTTP correctos**: `POST /api/products` retorna 201 Created, `DELETE` retorna 204 No Content.
+- **`@Transactional` en `StockService.register()`**: garantiza que la actualización del stock y la persistencia del movimiento sean atómicas.
+- **Reporte Kardex completo**: nuevo `KardexService` + `KardexItem` DTO que combina datos del producto con su historial de movimientos y muestra el efecto neto de cada movimiento (`stockEffect`).
+- **Pruebas unitarias con Mockito**: `ProductServiceTest` y `StockServiceTest` cubren todos los casos principales (CRUD, filtros, errores, movimientos IN/OUT, stock negativo).
+
+### Problemas encontrados
+
+- El bug de `type == "OUT"` es especialmente engañoso porque el código compila y arranca sin errores; el comportamiento incorrecto solo se manifiesta en tiempo de ejecución.
+- La ausencia de un `GlobalExceptionHandler` hacía que cualquier error devolviera stacktraces crudos al cliente, tanto en producción como en desarrollo.
+- El `KardexController` original tenía una dependencia circular implícita con `ProductService` para una funcionalidad que claramente pertenece a su propio servicio.
+
+### Decisiones técnicas importantes
+
+- **Arquitectura por feature packages**: se mantiene la estructura existente (`product`, `inventory`, `report`, `exception`) en lugar de una arquitectura por capas (controller/service/repository) para mantener la cohesión por dominio.
+- **DTO KardexItem separado del entity Product**: evita exponer la relación JPA bidireccional directamente en la respuesta HTTP y permite controlar exactamente qué campos se incluyen en el reporte.
+- **Pruebas unitarias sobre de integración**: dado el contexto de la prueba técnica con BD en la nube y tiempo limitado, se priorizaron pruebas unitarias con Mockito que son rápidas, no requieren BD y verifican la lógica de negocio de forma aislada.
+
+### Qué mejoraría con más tiempo
+
+- **Pruebas de integración**: agregar tests de integración con `@SpringBootTest` usando H2 en memoria para verificar el comportamiento end-to-end de los endpoints.
+- **Paginación**: los endpoints `GET /api/products` y `GET /api/reports/kardex` podrían devolver demasiados registros en producción. Implementaría paginación con `Pageable`.
+- **Auditoría en Product**: agregar campos `createdAt` / `updatedAt` en la entidad `Product` con `@CreationTimestamp` / `@UpdateTimestamp`.
+- **Soft delete**: en lugar de eliminar físicamente los productos, marcarlos como `active = false` para preservar el historial de movimientos referenciado.
+- **Caché**: para el endpoint del kardex (lectura intensiva), agregaría caché con `@Cacheable` + Spring Cache para mejorar el rendimiento en escenarios de alta transaccionalidad.
+- **Documentación con OpenAPI/Swagger**: agregar `springdoc-openapi-ui` para generar documentación interactiva de la API.
+- **Separar `@Valid` de ProductRequest en update vs create**: el `PUT` no debería requerir `code` (no debería modificarse), por lo que idealmente habría un `ProductUpdateRequest` separado del `ProductCreateRequest`.
+
+---
+
+## Tiempo empleado
+
+Aproximadamente **2 horas** de trabajo efectivo:
+- 20 min: análisis del código existente, identificación de bugs y lectura de requerimientos
+- 60 min: implementación de correcciones, mejoras y nuevas funcionalidades
+- 40 min: escritura de pruebas unitarias y documentación
 
 ## Restricciones
 
